@@ -22,4 +22,4 @@ Do not expose the API/dashboard directly to the public internet. Production use 
 ## Rules
 R1: 3+ distinct private IPv4 peers / 20s (+40); R2: 30+ file events / 10s (+35); R3: configured canary touched (+60); R4: operator-supplied audit finding (+15). Scores clamp to 0-100. Normal 0-39, Waspada 40-69, Kritis 70-100. R1-R3 decay by 10 every 30s; R4 persists. Auto-isolate is off by default and queues simulated commands only.
 
-See docs/architecture.md, docs/testing-plan.md and docs/demo-script.md.
+See docs/architecture.md, docs/testing-plan.md and docs/demo-script.md. Submission preparation: see submission/README.md, submission/criteria-matrix.md and submission/video-script-id.md.
