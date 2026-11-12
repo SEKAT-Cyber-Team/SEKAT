@@ -10,7 +10,10 @@ Defensive prototype for a disposable lab: endpoint telemetry, deterministic risk
 - React dashboard with endpoint health, risk levels, event history and isolate/release controls.
 - Synthetic simulator, tests, Docker Compose and demo documentation.
 
-## Start backend + dashboard
+## Fast local demo (no VM required)
+Run `bash scripts/demo-local.sh` from the repository root. The script builds the backend/dashboard containers, creates local API keys if no .env exists, waits for the API health endpoint and submits clearly synthetic demo events. Open http://localhost:8080 and use the admin key stored in .env. This is a dashboard/simulator demonstration only; it does not prove endpoint-agent runtime or real network isolation.
+
+## Start backend + dashboard manually
 1. Copy .env.example to .env and set unique random values for both API keys.
 2. Run: docker compose up --build -d
 3. Open http://localhost:8080 and enter SEKAT_ADMIN_API_KEY.
