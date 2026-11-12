@@ -3,7 +3,7 @@ import sys
 root=Path(__file__).resolve().parents[1]
 checks={
  "Auto-isolation disabled by default":"SEKAT_AUTO_ISOLATE=false" in (root/".env.example").read_text(),
- "Agent containment simulation enabled by default":"SEKAT_SIMULATED_QUARANTINE=true" in (root/".env.example").read_text(),
+ "Agent containment simulation enabled by default":"SEKAT_SIMULATED_QUARANTINE=true" in (root/"agent"/".env.example").read_text(),
  "Real containment adapter intentionally absent":"Real containment adapter is not implemented" in (root/"agent/sekat_agent/agent.py").read_text()
 }
 failed=False
