@@ -36,7 +36,7 @@ class Agent:
         if now-self.last_sample<self.cfg.network_sample:return
         self.last_sample=now
         try:peers={c.raddr.ip for c in psutil.net_connections(kind="inet") if c.raddr and c.status==psutil.CONN_ESTABLISHED}
-        except (psutil.AccessDenied,OSError) as e:print("[WARN] network observation unavailable:",e);return
+        except (psutil.AccessDenied,OSError) as e:print("[WARN] network observation:",e);return
         for peer in peers:
             for item in self.detector.record_peer(peer):self.emit(item)
     def poll(self):
@@ -57,10 +57,11 @@ class Agent:
             obs=Observer();obs.schedule(handler,str(root),recursive=True);obs.start();self.observers.append(obs)
         if not self.observers:print("[WARN] no existing watch directory; create it before starting the agent")
         print("[INFO] SEKAT agent started; containment mode is SIMULATED")
-        last_heartbeat=0
+        last_heartbeat=0;last_poll=0
         try:
             while not self.stopping.is_set():
-                now=time.monotonic();self.network_sample();self.poll()
+                now=time.monotonic();self.network_sample()
+                if now-last_poll>=self.cfg.poll:self.poll();last_poll=now
                 if self.detector.decay():self.emit(self.detector.event("STATUS_CHANGE",{"reason":"risk_decay"}))
                 if now-last_heartbeat>=self.cfg.heartbeat:
                     self.emit(self.detector.event("HEARTBEAT",{"quarantined_simulated":self.quarantined}));last_heartbeat=now
