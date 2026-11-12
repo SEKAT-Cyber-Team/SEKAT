@@ -29,3 +29,15 @@ jobs:
         with: {node-version: "20"}
       - run: cd dashboard && npm install
       - run: cd dashboard && npm run build
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python audit/check_config.py
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose config --quiet
+      - run: docker compose build
