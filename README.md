@@ -148,7 +148,7 @@ Simulator mengirim satu payload sintetis per perintah. Ia tidak membuat file uji
 1. Pastikan demo dapat berjalan lebih dulu.
 2. Temukan alamat IPv4 pada interface Host-Only komputer controller.
 3. Edit .env pada root repository:
-   - SEKAT_BIND_HOST=192.168.56.1 (contoh; ganti dengan IP interface Host-Only controller)
+   - Set SEKAT_BIND_HOST ke IP interface Host-Only controller. Contoh IP: 192.168.56.1 (ganti dengan IP yang benar pada komputermu).
    - SEKAT_AUTO_ISOLATE=false
 4. Pastikan firewall host hanya mengizinkan port TCP 8000 dari subnet Host-Only. Dashboard tetap terikat ke localhost port 8080.
 5. Recreate container setelah mengubah bind address:
@@ -172,7 +172,7 @@ Simulator mengirim satu payload sintetis per perintah. Ia tidak membuat file uji
    ~~~
 
 2. Edit agent/.env:
-   - SEKAT_API_URL=http://192.168.56.1:8000 (contoh; ganti dengan IP Host-Only controller)
+   - Set SEKAT_API_URL ke alamat backend Host-Only, misalnya http://192.168.56.1:8000. Ganti IP contoh dengan alamat controller yang benar.
    - SEKAT_API_KEY=<nilai SEKAT_AGENT_API_KEY dari .env controller>
    - SEKAT_HOST_ID=nama-endpoint-lab-yang-unik
    - SEKAT_WATCH_PATHS=/tmp/sekat-lab
@@ -187,7 +187,7 @@ Simulator mengirim satu payload sintetis per perintah. Ia tidak membuat file uji
 
 4. Uji koneksi VM ke controller:
    ~~~bash
-   curl http://<IP_HOST_ONLY_CONTROLLER>:8000/health
+   curl http://192.168.56.1:8000/health  # ganti IP contoh dengan IP Host-Only controller
    ~~~
 
 5. Muat konfigurasi dan jalankan agent:
