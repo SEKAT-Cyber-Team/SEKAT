@@ -16,9 +16,12 @@ def test_event_command_flow_and_host_bound_ack(tmp_path,monkeypatch):
     assert command.status_code==200
     cid=command.json()["command_id"]
     assert client.get("/api/commands?host=test-host",headers=agent).json()["commands"][0]["id"]==cid
+    # A delivered but unacknowledged command is redelivered after an agent restart.
+    assert client.get("/api/commands?host=test-host",headers=agent).json()["commands"][0]["id"]==cid
     assert client.post("/api/commands/ack",json={"command_id":cid,"host_id":"other-host","status":"applied"},headers=agent).status_code==403
     assert client.post("/api/commands/ack",json={"command_id":cid,"host_id":"test-host","status":"applied"},headers=agent).status_code==200
     assert client.get("/api/hosts",headers=admin).json()["hosts"][0]["quarantine_state"]=="isolated_simulated"
+    assert client.get("/api/commands?host=test-host",headers=agent).json()["commands"]==[]
     assert client.post("/api/hosts/test-host/commands",json={"action":"isolate"},headers=admin).status_code==409
     assert client.post("/api/hosts/test-host/commands",json={"action":"release"},headers=admin).status_code==200
 
