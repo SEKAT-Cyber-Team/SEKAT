@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 from fastapi import FastAPI, Header, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 AGENT_KEY=os.getenv("SEKAT_AGENT_API_KEY","local-agent-key-change-me")
 ADMIN_KEY=os.getenv("SEKAT_ADMIN_API_KEY","local-admin-key-change-me")
@@ -41,9 +41,19 @@ class EventIn(BaseModel):
     severity:Literal["info","low","medium","high","critical"]
     risk_score:int=Field(ge=0,le=100)
     detail:dict[str,Any]=Field(default_factory=dict)
-class CommandRequest(BaseModel): action:Literal["isolate","release"]
+
+    @field_validator("detail")
+    @classmethod
+    def limit_detail_size(cls,value):
+        if len(json.dumps(value,ensure_ascii=False,default=str).encode("utf-8"))>4096:
+            raise ValueError("detail must not exceed 4096 UTF-8 bytes")
+        return value
+
+class CommandRequest(BaseModel):
+    action:Literal["isolate","release"]
 class CommandAck(BaseModel):
     command_id:int
+    host_id:str=Field(min_length=1,max_length=100)
     status:Literal["applied","rejected"]
     detail:str=Field(default="",max_length=500)
 
@@ -51,8 +61,8 @@ class CommandAck(BaseModel):
 def startup():
     if os.getenv("SEKAT_ENV","development").lower()=="production":
         placeholders={"local-agent-key-change-me","local-admin-key-change-me","replace-with-a-long-random-agent-key","replace-with-a-long-random-admin-key"}
-        if AGENT_KEY in placeholders or ADMIN_KEY in placeholders or min(len(AGENT_KEY),len(ADMIN_KEY))<24:
-            raise RuntimeError("Production requires unique API keys of at least 24 characters.")
+        if AGENT_KEY in placeholders or ADMIN_KEY in placeholders or min(len(AGENT_KEY),len(ADMIN_KEY))<24 or hmac.compare_digest(AGENT_KEY,ADMIN_KEY):
+            raise RuntimeError("Production requires two distinct, unique API keys of at least 24 characters.")
     init_db()
 
 @app.get("/health")
@@ -60,8 +70,10 @@ def health(): return {"status":"ok","service":"sekat-api","time":now()}
 
 @app.post("/api/events",dependencies=[Depends(agent_auth)])
 def ingest(e:EventIn):
-    try: datetime.fromisoformat(e.timestamp.replace("Z","+00:00"))
-    except ValueError: raise HTTPException(422,"timestamp must be ISO-8601")
+    try:
+        parsed=datetime.fromisoformat(e.timestamp.replace("Z","+00:00"))
+        if parsed.tzinfo is None: raise ValueError("timezone is required")
+    except ValueError: raise HTTPException(422,"timestamp must be ISO-8601 with timezone")
     with db() as c:
         c.execute("""INSERT INTO hosts(host_id,hostname,ip,last_seen,status,risk_score) VALUES(?,?,?,?, 'online',?)
         ON CONFLICT(host_id) DO UPDATE SET hostname=excluded.hostname,ip=excluded.ip,last_seen=excluded.last_seen,status='online',risk_score=excluded.risk_score""",(e.host_id,e.hostname,e.ip,e.timestamp,e.risk_score))
@@ -85,6 +97,7 @@ def ack(a:CommandAck):
     with db() as c:
         r=c.execute("SELECT * FROM commands WHERE id=?",(a.command_id,)).fetchone()
         if not r: raise HTTPException(404,"Command not found")
+        if r["host_id"]!=a.host_id: raise HTTPException(403,"Command does not belong to this host")
         if r["status"] not in ("pending","delivered"): raise HTTPException(409,"Command already acknowledged")
         state=("isolated_simulated" if r["action"]=="isolate" else "released") if a.status=="applied" else "rejected"
         c.execute("UPDATE commands SET status=?,acknowledged_at=? WHERE id=?",(a.status,now(),a.command_id))
@@ -121,7 +134,9 @@ def queue(host_id:str,request:CommandRequest):
         if not host: raise HTTPException(404,"Host not found")
         pending=c.execute("SELECT id FROM commands WHERE host_id=? AND status IN ('pending','delivered') ORDER BY id DESC LIMIT 1",(host_id,)).fetchone()
         if pending: raise HTTPException(409,"A command is awaiting acknowledgement")
-        if request.action=="release" and host["quarantine_state"] in ("none","released"): raise HTTPException(409,"Host is not quarantined")
+        current=host["quarantine_state"]
+        if request.action=="isolate" and current=="isolated_simulated": raise HTTPException(409,"Host is already isolated (simulated)")
+        if request.action=="release" and current!="isolated_simulated": raise HTTPException(409,"Host is not isolated (simulated)")
         cur=c.execute("INSERT INTO commands(host_id,action,status,created_at) VALUES(?,?,'pending',?)",(host_id,request.action,now()))
         c.execute("UPDATE hosts SET quarantine_state='pending' WHERE host_id=?",(host_id,))
     return {"queued":True,"command_id":cur.lastrowid,"action":request.action}
