@@ -155,7 +155,8 @@ Simulator mengirim satu payload sintetis per perintah. Ia tidak membuat file uji
    ~~~bash
    docker compose up --build -d
    docker compose ps
-   CONTROLLER_IP=192.168.56.1  # ganti dengan IP interface Host-Only controller\n   curl http://$CONTROLLER_IP:8000/health
+   CONTROLLER_IP=192.168.56.1  # ganti dengan IP interface Host-Only controller
+   curl http://$CONTROLLER_IP:8000/health
    ~~~
    Jika shell belum memuat variabel .env, gunakan IP Host-Only secara langsung pada perintah curl. Jangan mengganti bind host menjadi 0.0.0.0 untuk demo.
 
