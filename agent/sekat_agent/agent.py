@@ -47,7 +47,7 @@ class Agent:
                 elif cmd["action"]=="isolate":self.quarantined=True;status,detail="applied","Simulated quarantine; network remains unchanged."
                 elif cmd["action"]=="release":self.quarantined=False;status,detail="applied","Simulated release; network remains unchanged."
                 else:status,detail="rejected","Unsupported command."
-                requests.post(self.cfg.api_url+"/api/commands/ack",json={"command_id":cmd["id"],"status":status,"detail":detail},headers=self.headers,timeout=5).raise_for_status()
+                requests.post(self.cfg.api_url+"/api/commands/ack",json={"command_id":cmd["id"],"host_id":self.cfg.host_id,"status":status,"detail":detail},headers=self.headers,timeout=5).raise_for_status()
         except requests.RequestException as e:print("[WARN] command polling:",e)
     def run(self):
         handler=Handler(self)
