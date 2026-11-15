@@ -30,7 +30,7 @@ Dokumen ini menjelaskan menjalankan Python agent pada VM endpoint yang terpisah 
    cp .env.example .env
    ~~~
 3. Edit agent/.env:
-   - SEKAT_API_URL=http://192.168.56.1:8000  (contoh; ganti dengan IP Host-Only controller)
+   - Set SEKAT_API_URL ke IP Host-Only controller, misalnya http://192.168.56.1:8000. Ganti IP contoh dengan alamat sebenarnya.
    - SEKAT_API_KEY=<nilai SEKAT_AGENT_API_KEY dari .env controller>
    - SEKAT_HOST_ID=<identifier unik endpoint>
    - SEKAT_WATCH_PATHS=/tmp/sekat-lab
