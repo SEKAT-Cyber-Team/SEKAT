@@ -1,34 +1,70 @@
-# Test and acceptance plan
+# Test plan dan kriteria penerimaan
 
-## Automated checks
+Dokumen ini memisahkan **tes otomatis**, **demo sintetis**, dan **pengujian runtime agent pada VM**. Ketiganya tidak boleh diklaim sebagai hal yang sama.
 
-- Backend: install `backend/requirements.txt`, then run `PYTHONPATH=. pytest -q` from `backend/`.
-- Agent: install `agent/requirements.txt`, then run `PYTHONPATH=. pytest -q` from `agent/`.
-- Configuration: run `python audit/check_config.py` from the repository root.
-- Dashboard: run `npm install && npm run build` from `dashboard/`.
-- Containers: run `cp .env.example .env`, `docker compose config --quiet` and `docker compose build`.
+## 1. Tes otomatis (CI)
 
-GitHub Actions runs these checks on pushes and pull requests. A green CI run proves the automated checks and image builds completed in GitHub's runner; it does not prove runtime behavior on the team's Parrot OS or VM network.
+Perintah dari root repository:
+~~~bash
+(cd backend && python -m pip install -r requirements.txt && PYTHONPATH=. pytest -q)
+(cd agent && python -m pip install -r requirements.txt && PYTHONPATH=. pytest -q)
+python audit/check_config.py
+(cd dashboard && npm install && npm run build)
+cp .env.example .env
+docker compose config --quiet
+docker compose build
+~~~
 
-## Manual lab acceptance
+GitHub Actions menjalankan lima job: backend, agent, dashboard, audit, containers. Hasil hijau berarti job yang tercantum selesai berhasil di runner GitHub; tidak berarti aplikasi telah dijalankan pada host/VM target.
 
-1. Start Compose; confirm the backend `/health` endpoint and dashboard load.
-2. Submit simulator scenarios `normal`, `scan`, `file-burst`, `canary`, `critical` and `audit` with different host IDs.
-3. Confirm hosts, events, risk scores and severity appear in the dashboard.
-4. Run an agent against a disposable VM's scoped `/tmp/sekat-lab` directory. Modify the canary marker and create harmless test files to trigger R2/R3.
-5. Confirm heartbeats and events arrive at the controller.
-6. Queue Isolate and Release for an agent-backed endpoint; confirm acknowledgements and simulated state changes.
-7. Verify endpoint networking, firewall rules and interfaces remain unchanged.
-8. For a separate endpoint VM, verify API connectivity only over the host-only network and confirm port 8000 is not reachable from public networks.
+## 2. Demo sintetis lokal
 
-## Negative checks
+1. Jalankan bash scripts/demo-local.sh.
+2. Pastikan GET /health menghasilkan status ok.
+3. Login dashboard dengan admin key dari root .env.
+4. Pastikan host/event sintetis terlihat.
+5. Cocokkan skenario Normal, R1, R2, R3, Critical dan R4 dengan nilai yang diharapkan.
+6. Antrean isolate/release baru dapat diuji round-trip jika endpoint agent yang terpisah sedang online; pada dashboard yang hanya berisi simulator, tidak ada agent yang akan mengambil dan meng-ack perintah.
 
-- Missing/wrong agent key -> 401.
-- Missing/wrong admin key -> 401.
-- Invalid event rule or out-of-range score -> validation error.
-- Duplicate pending command -> 409.
-- `.env`, database files, virtual environments and `node_modules` must not be committed.
+## 3. Penerimaan agent VM (manual, wajib sebelum menyatakan runtime teruji)
 
-## Acceptance boundary
+- [ ] Backend dan dashboard berjalan tanpa crash.
+- [ ] API terikat hanya ke localhost atau IP interface Host-Only yang spesifik.
+- [ ] Firewall host membatasi TCP 8000 ke subnet Host-Only.
+- [ ] VM dapat mengakses /health pada alamat controller.
+- [ ] Agent berjalan dengan folder pantauan /tmp/sekat-lab saja.
+- [ ] Heartbeat endpoint muncul di dashboard dalam waktu sekitar 30 detik.
+- [ ] Event file aman terkirim ketika file uji dibuat/diubah di folder tersebut.
+- [ ] Canary marker terdeteksi setelah marker disentuh; restart agent untuk mengulangi trigger satu kali.
+- [ ] Event risk score dan daftar event terlihat di dashboard.
+- [ ] Isolate command diterima agent, di-ack, dan state menjadi isolated_simulated.
+- [ ] Release command diterima agent, di-ack, dan state menjadi released.
+- [ ] Verifikasi OS: firewall, route, interface dan koneksi jaringan tidak berubah.
+- [ ] VM dapat dihentikan/dihapus tanpa berdampak pada perangkat atau jaringan lain.
 
-The MVP is ready for team runtime validation when health works, telemetry persists, detector/API tests pass, the command queue round-trip works, dashboard builds, and no destructive malware or real quarantine is used. It is not a production endpoint security product and has not been validated on the team's physical/virtual lab until the manual tests above are run.
+## 4. Negative/security checks
+
+- [ ] Event tanpa agent key atau dengan key salah mendapat 401.
+- [ ] Dashboard API tanpa admin key atau key salah mendapat 401.
+- [ ] Rule tak dikenal, skor di luar 0–100, timestamp tanpa timezone, dan detail lebih dari 4096 byte ditolak.
+- [ ] Host yang tidak cocok tidak dapat meng-ack command milik host lain.
+- [ ] Command duplikat yang masih pending/delivered ditolak (409).
+- [ ] Isolate pada host yang sudah isolated_simulated ditolak (409).
+- [ ] Release pada host yang belum isolated_simulated ditolak (409).
+- [ ] .env, agent/.env, database runtime, virtualenv dan node_modules tidak ada pada commit.
+- [ ] Port 8000 tidak dapat diakses dari jaringan publik.
+- [ ] Tidak ada pengujian malware atau tindakan destruktif.
+
+## 5. Keterbatasan yang harus dicatat
+
+- Satu shared agent key dipakai semua endpoint pada MVP ini. Host ID hanya pemisah data/perintah, bukan autentikasi perangkat yang kuat.
+- Tidak ada TLS, rate limiting, RBAC, enrollment per endpoint atau rotasi key otomatis.
+- Detector agent menyimpan state di memori; restart menghapus riwayat window/canary/risk agent.
+- Network observation bergantung pada izin OS dan dapat melewatkan koneksi.
+- SQLite adalah penyimpanan demo single-node.
+- Isolate/release hanya simulasi dan tidak dapat melindungi endpoint nyata.
+- Threshold R1–R4 adalah heuristik; false positive/negative mungkin terjadi.
+
+## 6. Acceptance boundary
+
+SEKAT dapat disebut **CI-passing** setelah semua job CI hijau. Sistem dapat disebut **local demo passing** setelah Compose, health, dashboard dan event sintetis berhasil berjalan pada mesin uji. Sistem hanya boleh disebut **agent VM runtime tested** setelah seluruh checklist VM di atas dijalankan dan bukti aktualnya disimpan. Ketiganya bukan status yang dapat saling menggantikan.

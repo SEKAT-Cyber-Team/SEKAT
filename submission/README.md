@@ -36,4 +36,4 @@ The generated presentation/video materials use synthetic data and illustrative U
 - [ ] Verify every link from an incognito browser.
 - [ ] Save the submission confirmation screenshot.
 
-See criteria-matrix.md for the weighted evaluation mapping and video-script-id.md for the Indonesian narration.
+See criteria-matrix.md for the weighted evaluation mapping and video-script-id.md for the Indonesian narration. For implementation, setup, configuration, testing and security boundaries, start from the repository root README.md and SECURITY.md.
