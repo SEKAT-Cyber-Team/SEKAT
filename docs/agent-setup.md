@@ -1,60 +1,70 @@
-# Agent setup (disposable lab VM)
+# Agent setup — disposable lab VM
 
-The agent runs on the endpoint being monitored. The backend and dashboard run in Docker Compose on the controller/host machine. Do not test containment on production or your everyday laptop: this build only simulates quarantine and never changes endpoint networking.
+Dokumen ini menjelaskan menjalankan Python agent pada VM endpoint yang terpisah dari controller Docker. Jangan gunakan endpoint produksi atau laptop harian. Versi ini hanya mendukung **simulasi** perintah isolate/release.
 
-## 1. Configure the controller
+## 1. Konfigurasi controller
 
-1. Copy the repository root `.env.example` to `.env`.
-2. Generate two different random API keys (at least 24 characters), then set `SEKAT_AGENT_API_KEY` and `SEKAT_ADMIN_API_KEY`. Never commit `.env`.
-3. For an agent running on the **same machine**, keep `SEKAT_BIND_HOST=127.0.0.1`.
-4. For an agent in a **separate disposable VM**, find the controller machine's IP address on its host-only lab interface (for example with `ip -4 addr`). Set `SEKAT_BIND_HOST` in the controller's `.env` to that specific IP address. Do not use `0.0.0.0`.
-5. Start or recreate the services after changing the bind address:
-   ```bash
+1. Salin root .env.example menjadi .env.
+2. Buat dua API key acak yang berbeda (minimal 24 karakter), lalu isi SEKAT_AGENT_API_KEY dan SEKAT_ADMIN_API_KEY. Jangan commit file .env.
+3. Jika agent berjalan pada host yang sama, pertahankan SEKAT_BIND_HOST=127.0.0.1.
+4. Jika agent berada di VM terpisah, cari IP komputer controller pada interface Host-Only. Isi SEKAT_BIND_HOST dengan IP interface tersebut secara spesifik. Jangan gunakan 0.0.0.0.
+5. Izinkan port TCP 8000 hanya dari subnet Host-Only melalui firewall host. Dashboard tetap terikat ke localhost port 8080.
+6. Recreate service setelah mengubah bind address:
+   ~~~bash
    docker compose up --build -d
    docker compose ps
-   curl http://127.0.0.1:8000/health
-   ```
-6. Restrict the controller firewall so port 8000 accepts connections only from the isolated host-only lab subnet. Do not expose the API on a public interface. The dashboard remains bound to controller localhost at `http://localhost:8080`.
+   curl http://<CONTROLLER_HOST_ONLY_IP>:8000/health
+   ~~~
+   Untuk bind lokal, gunakan curl http://127.0.0.1:8000/health. Untuk bind Host-Only, health check lokal harus memakai IP Host-Only itu, bukan 127.0.0.1.
 
-## 2. Prepare the endpoint VM
+## 2. Siapkan endpoint VM
 
-1. Clone the repository inside a disposable VM and install Python 3.11+.
-2. Create and activate a virtual environment:
-   ```bash
+1. Clone repository ke VM disposable dan instal Python 3.11+.
+2. Buat virtual environment:
+   ~~~bash
+   git clone https://github.com/SEKAT-Cyber-Team/SEKAT.git
    cd SEKAT/agent
-   python -m venv .venv
+   python3 -m venv .venv
    source .venv/bin/activate
    pip install -r requirements.txt
    cp .env.example .env
-   ```
-3. Edit `agent/.env`:
-   - `SEKAT_API_URL=http://127.0.0.1:8000` when controller and agent are on the same machine.
-   - For a separate VM, use `http://<CONTROLLER_HOST_ONLY_IP>:8000`.
-   - Set `SEKAT_API_KEY` to the exact value of the controller's `SEKAT_AGENT_API_KEY`.
-   - Keep `SEKAT_SIMULATED_QUARANTINE=true`.
-   - Keep `SEKAT_WATCH_PATHS` limited to the test folder.
-4. Create a harmless marker:
-   ```bash
+   ~~~
+3. Edit agent/.env:
+   - SEKAT_API_URL=http://<CONTROLLER_HOST_ONLY_IP>:8000
+   - SEKAT_API_KEY=<nilai SEKAT_AGENT_API_KEY dari .env controller>
+   - SEKAT_HOST_ID=<identifier unik endpoint>
+   - SEKAT_WATCH_PATHS=/tmp/sekat-lab
+   - SEKAT_CANARY_PATH=/tmp/sekat-lab/SEKAT_CANARY.txt
+   - SEKAT_SIMULATED_QUARANTINE=true
+4. Buat folder dan marker:
+   ~~~bash
    mkdir -p /tmp/sekat-lab
-   printf 'SEKAT demo canary - harmless marker\n' > /tmp/sekat-lab/SEKAT_CANARY.txt
-   ```
-5. Load the agent configuration and start it:
-   ```bash
+   printf 'SEKAT harmless canary marker\n' > /tmp/sekat-lab/SEKAT_CANARY.txt
+   ~~~
+5. Pastikan controller dapat dijangkau:
+   ~~~bash
+   curl http://<CONTROLLER_HOST_ONLY_IP>:8000/health
+   ~~~
+6. Jalankan agent:
+   ~~~bash
    set -a
    source .env
    set +a
    python -m sekat_agent
-   ```
+   ~~~
 
-The agent observes only configured directories and established connections visible to its process. If the OS denies access to connection information, it logs a warning and skips that sample; do not broaden privileges or watch paths on your daily-use machine.
+## 3. Pemeriksaan
 
-## 3. Confirm connectivity
+- Dashboard di komputer controller: http://localhost:8080.
+- Masukkan SEKAT_ADMIN_API_KEY dari root .env.
+- Tunggu heartbeat pertama, endpoint akan muncul jika event berhasil dikirim.
+- Jalankan file test hanya di /tmp/sekat-lab untuk melihat R2/R3.
+- Klik Isolate dan Release; konfirmasi status isolated_simulated dan released.
 
-- Controller local health check: `curl http://127.0.0.1:8000/health`.
-- Dashboard: open `http://localhost:8080` and enter `SEKAT_ADMIN_API_KEY`.
-- From a separate VM, verify `curl http://<CONTROLLER_HOST_ONLY_IP>:8000/health` before starting the agent.
-- The dashboard key is held in browser session storage and is cleared when the console is locked or the browser session ends.
+Agent hanya mengamati folder yang dikonfigurasi dan koneksi established yang terlihat oleh proses. OS dapat menolak akses network observation; jika demikian agent mencatat warning dan melewati sampel. Jangan menaikkan privilege atau memperluas scope ke direktori pribadi hanya untuk menghilangkan warning.
 
-## Safety boundary
+## 4. Batas keselamatan
 
-`SEKAT_SIMULATED_QUARANTINE=true` means an isolate/release command changes only an in-memory simulation flag and sends an acknowledgement. It does not block packets, change firewall rules, disable interfaces, kill processes or stop services. No real isolation adapter is included in this MVP.
+SEKAT_SIMULATED_QUARANTINE=true membuat perintah hanya mengubah flag di memori agent dan mengirim acknowledgement. Tidak ada perubahan firewall, routing, interface, proses, atau layanan OS. Adapter containment sungguhan tidak tersedia.
+
+Semua endpoint menggunakan shared agent API key pada MVP ini. Host ID bukan identitas endpoint yang kuat. Batasi jaringan pada lab tepercaya dan jangan mengekspos port API ke internet.
