@@ -88,7 +88,7 @@ def ingest(e:EventIn):
 @app.get("/api/commands",dependencies=[Depends(agent_auth)])
 def commands(host:str=Query(min_length=1,max_length=100)):
     with db() as c:
-        rows=c.execute("SELECT id,action,created_at FROM commands WHERE host_id=? AND status='pending' ORDER BY id",(host,)).fetchall()
+        rows=c.execute("SELECT id,action,created_at FROM commands WHERE host_id=? AND status IN ('pending','delivered') ORDER BY id",(host,)).fetchall()
         if rows: c.executemany("UPDATE commands SET status='delivered' WHERE id=?",[(r["id"],) for r in rows])
     return {"commands":[dict(r) for r in rows]}
 
