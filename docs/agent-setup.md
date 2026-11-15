@@ -13,7 +13,8 @@ Dokumen ini menjelaskan menjalankan Python agent pada VM endpoint yang terpisah 
    ~~~bash
    docker compose up --build -d
    docker compose ps
-   CONTROLLER_IP=192.168.56.1  # ganti dengan IP Host-Only controller\n   curl http://$CONTROLLER_IP:8000/health
+   CONTROLLER_IP=192.168.56.1  # ganti dengan IP Host-Only controller
+   curl http://$CONTROLLER_IP:8000/health
    ~~~
    Untuk bind lokal, gunakan curl http://127.0.0.1:8000/health. Untuk bind Host-Only, health check lokal harus memakai IP Host-Only itu, bukan 127.0.0.1.
 
