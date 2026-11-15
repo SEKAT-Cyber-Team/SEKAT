@@ -55,7 +55,7 @@ Docker Compose hanya menjalankan **backend dan dashboard**. Agent dijalankan ter
 | R1 | Minimal 3 alamat IPv4 private berbeda yang teramati dalam 20 detik | +40 |
 | R2 | Minimal 30 event file dalam 10 detik pada folder pantauan | +35 |
 | R3 | Canary file yang dikonfigurasi disentuh | +60 |
-| R4 | Temuan audit yang dimasukkan operator (bukan audit otomatis agent) | +15 |
+| R4 | Temuan audit yang dikirim/disimulasikan sebagai event R4 (bukan audit otomatis agent) | +15 |
 
 Skor dijumlahkan dan dibatasi pada 0–100. Level: **Normal 0–39**, **Waspada 40–69**, **Kritis 70–100**. Skor R1–R3 berkurang 10 poin setiap 30 detik; R4 tidak mengalami decay otomatis.
 
@@ -148,14 +148,14 @@ Simulator mengirim satu payload sintetis per perintah. Ia tidak membuat file uji
 1. Pastikan demo dapat berjalan lebih dulu.
 2. Temukan alamat IPv4 pada interface Host-Only komputer controller.
 3. Edit .env pada root repository:
-   - SEKAT_BIND_HOST=<IP_HOST_ONLY_CONTROLLER>
+   - SEKAT_BIND_HOST=192.168.56.1 (contoh; ganti dengan IP interface Host-Only controller)
    - SEKAT_AUTO_ISOLATE=false
 4. Pastikan firewall host hanya mengizinkan port TCP 8000 dari subnet Host-Only. Dashboard tetap terikat ke localhost port 8080.
 5. Recreate container setelah mengubah bind address:
    ~~~bash
    docker compose up --build -d
    docker compose ps
-   curl http://<IP_HOST_ONLY_CONTROLLER>:8000/health
+   CONTROLLER_IP=192.168.56.1  # ganti dengan IP interface Host-Only controller\n   curl http://$CONTROLLER_IP:8000/health
    ~~~
    Jika shell belum memuat variabel .env, gunakan IP Host-Only secara langsung pada perintah curl. Jangan mengganti bind host menjadi 0.0.0.0 untuk demo.
 
@@ -172,7 +172,7 @@ Simulator mengirim satu payload sintetis per perintah. Ia tidak membuat file uji
    ~~~
 
 2. Edit agent/.env:
-   - SEKAT_API_URL=http://<IP_HOST_ONLY_CONTROLLER>:8000
+   - SEKAT_API_URL=http://192.168.56.1:8000 (contoh; ganti dengan IP Host-Only controller)
    - SEKAT_API_KEY=<nilai SEKAT_AGENT_API_KEY dari .env controller>
    - SEKAT_HOST_ID=nama-endpoint-lab-yang-unik
    - SEKAT_WATCH_PATHS=/tmp/sekat-lab
