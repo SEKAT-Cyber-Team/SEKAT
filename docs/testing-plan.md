@@ -24,7 +24,7 @@ GitHub Actions menjalankan lima job: backend, agent, dashboard, audit, container
 3. Login dashboard dengan admin key dari root .env.
 4. Pastikan host/event sintetis terlihat.
 5. Cocokkan skenario Normal, R1, R2, R3, Critical dan R4 dengan nilai yang diharapkan.
-6. Antrean isolate/release melalui dashboard hanya dapat diuji sampai antrean pada demo simulator-only; untuk round-trip agent, jalankan agent terpisah.
+6. Antrean isolate/release baru dapat diuji round-trip jika endpoint agent yang terpisah sedang online; pada dashboard yang hanya berisi simulator, tidak ada agent yang akan mengambil dan meng-ack perintah.
 
 ## 3. Penerimaan agent VM (manual, wajib sebelum menyatakan runtime teruji)
 
