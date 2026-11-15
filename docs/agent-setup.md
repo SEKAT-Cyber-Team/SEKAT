@@ -13,7 +13,7 @@ Dokumen ini menjelaskan menjalankan Python agent pada VM endpoint yang terpisah 
    ~~~bash
    docker compose up --build -d
    docker compose ps
-   curl http://<CONTROLLER_HOST_ONLY_IP>:8000/health
+   CONTROLLER_IP=192.168.56.1  # ganti dengan IP Host-Only controller\n   curl http://$CONTROLLER_IP:8000/health
    ~~~
    Untuk bind lokal, gunakan curl http://127.0.0.1:8000/health. Untuk bind Host-Only, health check lokal harus memakai IP Host-Only itu, bukan 127.0.0.1.
 
@@ -30,7 +30,7 @@ Dokumen ini menjelaskan menjalankan Python agent pada VM endpoint yang terpisah 
    cp .env.example .env
    ~~~
 3. Edit agent/.env:
-   - SEKAT_API_URL=http://<CONTROLLER_HOST_ONLY_IP>:8000
+   - SEKAT_API_URL=http://192.168.56.1:8000  (contoh; ganti dengan IP Host-Only controller)
    - SEKAT_API_KEY=<nilai SEKAT_AGENT_API_KEY dari .env controller>
    - SEKAT_HOST_ID=<identifier unik endpoint>
    - SEKAT_WATCH_PATHS=/tmp/sekat-lab
@@ -43,7 +43,7 @@ Dokumen ini menjelaskan menjalankan Python agent pada VM endpoint yang terpisah 
    ~~~
 5. Pastikan controller dapat dijangkau:
    ~~~bash
-   curl http://<CONTROLLER_HOST_ONLY_IP>:8000/health
+   curl http://192.168.56.1:8000/health  # gunakan IP Host-Only controller yang benar
    ~~~
 6. Jalankan agent:
    ~~~bash
